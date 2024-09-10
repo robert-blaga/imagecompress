@@ -183,7 +183,7 @@ export default function Home() {
         {isDragActive ? (
           <p>Drop the images here ...</p>
         ) : (
-          <p>Drag 'n' drop images here, or click to select files</p>
+          <p>Drag &apos;n&apos; drop images here, or click to select files</p>
         )}
       </div>
       {images.length > 0 && (

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   let outputFormat: string;
 
   const image = sharp(buffer);
-  const metadata = await image.metadata();
+  const _metadata = await image.metadata();
 
   if (originalFormat === 'png') {
     outputFormat = 'png';
