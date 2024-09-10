@@ -12,12 +12,24 @@ export async function POST(req: NextRequest) {
   const buffer = await file.arrayBuffer();
   const originalSize = buffer.byteLength;
 
-  const image = sharp(buffer);
-  // Remove the unused metadata line
-  // const _metadata = await image.metadata();
+  const image = sharp(Buffer.from(buffer));
 
-  if (file.name.split('.').pop()?.toLowerCase() === 'png') {
-    const compressedBuffer = await image
+  // Determine the output format based on the input file type
+  const inputFormat = file.name.split('.').pop()?.toLowerCase();
+  let outputFormat: 'jpeg' | 'png' | 'webp';
+
+  if (inputFormat === 'png') {
+    outputFormat = 'png';
+  } else if (inputFormat === 'jpg' || inputFormat === 'jpeg') {
+    outputFormat = 'jpeg';
+  } else {
+    outputFormat = 'webp'; // Default to WebP for other formats
+  }
+
+  let compressedBuffer: Buffer;
+
+  if (outputFormat === 'png') {
+    compressedBuffer = await image
       .png({
         quality: 100,
         compressionLevel: 9,
@@ -25,60 +37,33 @@ export async function POST(req: NextRequest) {
         palette: true
       })
       .toBuffer();
-    const compressedSize = compressedBuffer.length;
-    const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
-
-    return new NextResponse(compressedBuffer, {
-      headers: {
-        'Content-Type': `image/png`,
-        'Content-Disposition': `attachment; filename="${file.name.split('.')[0]}.png"`,
-        'X-Compression-Ratio': savings
-      },
-    });
-  } else if (file.name.split('.').pop()?.toLowerCase() === 'jpg' || file.name.split('.').pop()?.toLowerCase() === 'jpeg') {
-    const compressedBuffer = await image
+  } else if (outputFormat === 'jpeg') {
+    compressedBuffer = await image
       .jpeg({
         quality: 85,
         mozjpeg: true
       })
       .toBuffer();
-    const compressedSize = compressedBuffer.length;
-    const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
-
-    return new NextResponse(compressedBuffer, {
-      headers: {
-        'Content-Type': `image/jpeg`,
-        'Content-Disposition': `attachment; filename="${file.name.split('.')[0]}.jpeg"`,
-        'X-Compression-Ratio': savings
-      },
-    });
   } else {
-    // For other formats, convert to WebP
-    let compressedBuffer: Buffer;
-    if (outputFormat === 'webp') {
-      compressedBuffer = await image
-        .webp({
-          quality: 80,
-          lossless: false,
-          nearLossless: true,
-          effort: 6  // Use 'effort' instead of 'reductionEffort'
-        })
-        .toBuffer();
-    } else {
-      compressedBuffer = await image
-        .jpeg({ quality: 80 })
-        .toBuffer();
-    }
-
-    const compressedSize = compressedBuffer.length;
-    const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
-
-    return new NextResponse(compressedBuffer, {
-      headers: {
-        'Content-Type': `image/webp`,
-        'Content-Disposition': `attachment; filename="${file.name.split('.')[0]}.webp"`,
-        'X-Compression-Ratio': savings
-      },
-    });
+    // WebP
+    compressedBuffer = await image
+      .webp({
+        quality: 80,
+        lossless: false,
+        nearLossless: true,
+        effort: 6
+      })
+      .toBuffer();
   }
+
+  const compressedSize = compressedBuffer.length;
+  const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
+
+  return new NextResponse(compressedBuffer, {
+    headers: {
+      'Content-Type': `image/${outputFormat}`,
+      'Content-Disposition': `attachment; filename="${file.name.split('.')[0]}.${outputFormat}"`,
+      'X-Compression-Ratio': savings
+    },
+  });
 }
