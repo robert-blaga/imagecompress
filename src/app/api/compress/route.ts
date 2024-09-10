@@ -54,14 +54,22 @@ export async function POST(req: NextRequest) {
     });
   } else {
     // For other formats, convert to WebP
-    const compressedBuffer = await image
-      .webp({
-        quality: 80,
-        lossless: false,
-        nearLossless: true,
-        reductionEffort: 6
-      })
-      .toBuffer();
+    let compressedBuffer: Buffer;
+    if (outputFormat === 'webp') {
+      compressedBuffer = await image
+        .webp({
+          quality: 80,
+          lossless: false,
+          nearLossless: true,
+          effort: 6  // Use 'effort' instead of 'reductionEffort'
+        })
+        .toBuffer();
+    } else {
+      compressedBuffer = await image
+        .jpeg({ quality: 80 })
+        .toBuffer();
+    }
+
     const compressedSize = compressedBuffer.length;
     const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
 
